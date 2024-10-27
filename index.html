@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ToolsHub API Tools</title>
+  <style>
+    /* Global styling */
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f0f8ff; }
+    .container { max-width: 600px; margin: auto; padding: 20px; }
+
+    /* Navigation styling */
+    .nav { display: flex; justify-content: space-around; background-color: #333; padding: 10px; }
+    .nav button { background-color: #4CAF50; color: white; border: none; padding: 10px; cursor: pointer; }
+    .nav button.active { background-color: #45a049; }
+
+    /* Section styling */
+    .section { display: none; background-color: #fff; padding: 30px; border-radius: 10px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); margin-top: 20px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-weight: bold; }
+    input[type="text"], input[type="email"], input[type="password"], input[type="url"] { width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ddd; }
+    .btn { width: 100%; padding: 10px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; }
+    .toggle { color: #0066cc; cursor: pointer; text-align: center; margin-top: 15px; }
+
+    /* Specific button colors */
+    #taskSelection .btn { background-color: #007bff; }
+    #taskSelection .btn:hover { background-color: #0056b3; }
+    #signupLogin .btn { background-color: #4CAF50; color: white; }
+    #signupLogin .btn:hover { background-color: #45a049; }
+  </style>
+</head>
+<body>
+
+  <!-- Sign Up/Login Section -->
+  <div id="signupLogin" class="section">
+    <h2 id="formTitle">Sign Up</h2>
+    <form id="authForm">
+      <div class="form-group">
+        <label for="email">Email (Gmail)</label>
+        <input type="email" id="email" placeholder="Enter Gmail" required>
+      </div>
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="Enter Username" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter Password" required>
+      </div>
+      <button type="button" class="btn" onclick="authenticateUser()">Sign Up</button>
+      <p class="toggle" onclick="toggleAuth()">Already have an account? Login</p>
+    </form>
+  </div>
+
+  <!-- Task & API Key Generation Section -->
+  <div id="taskSelection" class="section">
+    <h2>API Tools Task Selection</h2>
+    <form>
+      <div class="form-group">
+        <label for="task">Enter Task</label>
+        <input type="text" id="task" placeholder="Enter task (e.g., bad review removal)">
+      </div>
+      <div class="form-group">
+        <label for="platform">Search or Enter Review/Listing Platform</label>
+        <input type="text" id="platform" placeholder="Enter any platform (e.g., Google, Yelp)">
+      </div>
+      <div class="form-group">
+        <label for="listingLink">Paste Listing Link</label>
+        <input type="url" id="listingLink" placeholder="Enter the link to your listing">
+      </div>
+      <div class="form-group">
+        <button type="button" class="btn" onclick="generateApiKey()">Generate API Key</button>
+        <input type="text" id="apiKey" readonly placeholder="API Key will appear here">
+      </div>
+      <div class="form-group">
+        <button type="button" class="btn" onclick="startProject()">Start Project</button>
+        <p id="completionTimer">Estimated Completion Time: Not Started</p>
+      </div>
+      <button type="button" class="btn" onclick="showSection('historyProgress')">View Work History</button>
+    </form>
+  </div>
+
+  <!-- History & Progress Section -->
+  <div id="historyProgress" class="section">
+    <h2>Work History & API Key Log</h2>
+    <div id="historyContainer">
+      <!-- Work history and API key records will load here -->
+    </div>
+  </div>
+
+  <script>
+    // Show specific section based on navigation
+    function showSection(sectionId) {
+      document.querySelectorAll('.section').forEach(section => section.style.display = 'none');
+      document.getElementById(sectionId).style.display = 'block';
+    }
+    showSection('signupLogin'); // Show the signup/login section by default
+
+    // Toggle between Sign Up and Login
+    let isLogin = false;
+    function toggleAuth() {
+      isLogin = !isLogin;
+      document.getElementById("formTitle").innerText = isLogin ? "Login" : "Sign Up";
+      document.querySelector("#signupLogin .btn").innerText = isLogin ? "Login" : "Sign Up";
+      document.querySelector(".toggle").innerText = isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login";
+    }
+
+    // Authentication for Sign Up/Login
+    function authenticateUser() {
+      const email = document.getElementById("email").value;
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+
+      if (!isLogin) {
+        if (!email.endsWith("@gmail.com")) {
+          alert("Please use a valid Gmail address.");
+          return;
+        }
+        if (localStorage.getItem(email)) {
+          alert("This Gmail is already registered. Please log in.");
+          toggleAuth();
+          return;
+        }
+        localStorage.setItem(email, JSON.stringify({ username, password }));
+        alert("Sign-up successful! Redirecting to Task Page.");
+      } else {
+        const storedUser = JSON.parse(localStorage.getItem(email));
+        if (!storedUser || storedUser.password !== password) {
+          alert("Incorrect credentials. Please try again.");
+          return;
+        }
+        alert("Login successful! Redirecting to Task Page.");
+      }
+      showSection('taskSelection');
+    }
+
+    // Generate and display API Key
+    function generateApiKey() {
+      const apiKey = Math.random().toString(36).substr(2, 10).toUpperCase();
+      document.getElementById("apiKey").value = apiKey;
+      alert("API Key generated: " + apiKey);
+
+      // Store the API Key in localStorage
+      let history = JSON.parse(localStorage.getItem("apiKeyHistory")) || [];
+      history.push(apiKey);
+      localStorage.setItem("apiKeyHistory", JSON.stringify(history));
+      loadHistory(); // Refresh history after new API Key generation
+    }
+
+    // Start project and initiate a timer
+    function startProject() {
+      const completionTimeRange = 24 + Math.floor(Math.random() * 49); // Random completion time between 24 to 72 hours
+      const completionTime = Date.now() + (completionTimeRange * 60 * 60 * 1000); // Convert hours to milliseconds
+      localStorage.setItem("projectStartTime", Date.now());
+      localStorage.setItem("projectEndTime", completionTime);
+
+      updateCompletionTimer();
+      alert("Project started! Estimated completion time is in " + completionTimeRange + " hours.");
+    }
+
+    // Update the completion timer every second
+    function updateCompletionTimer() {
+      const timerElement = document.getElementById("completionTimer");
+      const interval = setInterval(() => {
+        const endTime = parseInt(localStorage.getItem("projectEndTime"));
+        const remainingTime = endTime - Date.now();
+
+        if (remainingTime <= 0) {
+          timerElement.innerText = "Project completed!";
+          clearInterval(interval);
+        } else {
+          const hours = Math.floor(remainingTime / (1000 * 60 * 60));
+          const minutes = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
+          timerElement.innerText = `Estimated Completion Time: ${hours}h ${minutes}m ${seconds}s remaining`;
+        }
+      }, 1000);
+    }
+
+    // Load API Key history and project progress in History & Progress section
+    function loadHistory() {
+      const history = JSON.parse(localStorage.getItem("apiKeyHistory")) || [];
+      const historyContainer = document.getElementById("historyContainer");
+      
+      const projectEndTime = parseInt(localStorage.getItem("projectEndTime"));
+      const projectProgress = (Date.now() >= projectEndTime) ? "Completed" : "In Progress";
+
+      const historyHTML = history.map(apiKey => `<div class="history-record" style="margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; background-color: #e7f3fe;">
+          <p>API Key: ${apiKey}</p>
+        </div>`).join('');
+
+      historyContainer.innerHTML = `<h3>Project Status: ${projectProgress}</h3><p id="historyTimer"></p>${historyHTML}`;
+      updateHistoryTimer();
+    }
+
+    // Update the history timer to show remaining time
+    function updateHistoryTimer() {
+      const historyTimer = document.getElementById("historyTimer");
+      const interval = setInterval(() => {
+        const endTime = parseInt(localStorage.getItem("projectEndTime"));
+        const remainingTime = endTime - Date.now();
+
+        if (remainingTime <= 0) {
+          historyTimer.innerText = "Project completed!";
+          clearInterval(interval);
+        } else {
+          const hours = Math.floor(remainingTime / (1000 * 60 * 60));
+          const minutes = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
+          historyTimer.innerText = `Time Remaining: ${hours}h ${minutes}m ${seconds}s`;
+        }
+      }, 1000);
+    }
+
+    loadHistory(); // Initial load of history
+  </script>
+</body>
+</html>
